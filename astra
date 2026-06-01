@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""ASTRA Command OS — CLI Launcher"""
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "apps", "cli", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "engines"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "services"))
+
+from astra_cli.main import cli
+
+if __name__ == "__main__":
+    cli()
