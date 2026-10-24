@@ -1,0 +1,17 @@
+services:
+  cline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cline-gwarden:latest
+    working_dir: /workspace
+    environment:
+      GWARDEN_API_KEY: ${GWARDEN_API_KEY:?set GWARDEN_API_KEY}
+      CLINE_TASK: ${CLINE_TASK:?set CLINE_TASK}
+      CLINE_BASE_URL: ${CLINE_BASE_URL:-https://gwarden.su/v1}
+      CLINE_MODEL: ${CLINE_MODEL:-gemini-4-argon}
+      CLINE_TIMEOUT: ${CLINE_TIMEOUT:-1800}
+      CLINE_AUTO_APPROVE: ${CLINE_AUTO_APPROVE:-true}
+      CLINE_CWD: /workspace
+    volumes:
+      - ../:/workspace

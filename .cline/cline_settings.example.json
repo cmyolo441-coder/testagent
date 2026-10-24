@@ -1,0 +1,29 @@
+{
+  "apiProvider": "openai",
+  "openAiBaseUrl": "https://gwarden.su/v1",
+  "openAiApiKey": "YOUR_GWARDEN_API_KEY",
+  "openAiModelId": "gemini-4-argon",
+  "openAiHeaders": {},
+  "openAiLegacyFormat": false,
+  "openAiModelInfo": {
+    "maxTokens": 64000,
+    "contextWindow": 1000000,
+    "supportsImages": true,
+    "supportsPromptCache": false,
+    "inputPrice": 0,
+    "outputPrice": 0,
+    "temperature": 0
+  },
+  "anthropicBaseUrl": "https://gwarden.su",
+  "anthropicApiKey": "YOUR_GWARDEN_API_KEY",
+  "anthropicModelId": "gemini-4-argon",
+  "anthropicModelInfo": {
+    "maxTokens": 64000,
+    "contextWindow": 1000000,
+    "supportsImages": true,
+    "supportsPromptCache": false,
+    "inputPrice": 0,
+    "outputPrice": 0,
+    "temperature": 0
+  }
+}

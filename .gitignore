@@ -1,0 +1,8 @@
+# Local Cline provider settings (contains secrets - never commit)
+.cline/cline_settings.json
+.cline/*.local.json
+.env
+.env.local
+
+# Local tooling / sandbox scratch (Cline CLI install, agent runtime data)
+.tools/

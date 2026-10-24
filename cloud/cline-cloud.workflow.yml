@@ -1,0 +1,116 @@
+name: Cline cloud agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Task for Cline"
+        required: true
+        type: string
+      branch:
+        description: "Branch to work on"
+        required: true
+        default: "main"
+        type: string
+      model:
+        description: "Model ID to run (any id from GET https://gwarden.su/v1/models)"
+        required: false
+        default: "gemini-4-argon"
+        type: choice
+        options:
+          - gemini-4-argon
+          - gemini-3.1-pro
+          - gemini-3.8-flash
+          - claude-opus-5
+          - claude-fable-5
+          - glm-5.3
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: cline-cloud-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  cline:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request == null &&
+       contains(github.event.comment.body, '@cline') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    env:
+      GWARDEN_API_KEY: ${{ secrets.GWARDEN_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CLINE_BASE_URL: https://gwarden.su/v1
+      CLINE_MODEL: ${{ inputs.model || 'gemini-4-argon' }}
+      CLINE_TIMEOUT: "1800"
+      CLINE_AUTO_APPROVE: "true"
+    steps:
+      - name: Resolve task and branch
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TASK="${{ inputs.task }}"
+            BRANCH="${{ inputs.branch }}"
+          else
+            TASK="${{ github.event.comment.body }}"
+            TASK="${TASK//@cline/}"
+            BRANCH="${{ github.event.repository.default_branch }}"
+          fi
+          {
+            echo "task<<CLINE_TASK_EOF"
+            printf '%s\n' "$TASK"
+            echo "CLINE_TASK_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "work_branch=cline/cloud-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.branch }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Cline CLI
+        run: npm install -g cline@3.0.73
+
+      - name: Run Cline agent on the gwarden gateway
+        env:
+          CLINE_TASK: ${{ steps.resolve.outputs.task }}
+          CLINE_CWD: ${{ github.workspace }}
+        run: bash cloud/run-cline-cloud.sh | tee cline-run.jsonl
+
+      - name: Open a pull request with the agent's changes
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Agent produced no file changes."
+            exit 0
+          fi
+          git config user.name "cline-cloud[bot]"
+          git config user.email "cline-cloud@users.noreply.github.com"
+          git checkout -B "${{ steps.resolve.outputs.work_branch }}"
+          git add -A
+          git commit -m "cline-cloud: automated change (gemini-4-argon via gwarden.su)"
+          git push -u origin "${{ steps.resolve.outputs.work_branch }}"
+          gh pr create \
+            --base "${{ steps.resolve.outputs.branch }}" \
+            --head "${{ steps.resolve.outputs.work_branch }}" \
+            --title "cline-cloud: automated change" \
+            --body "Automated run by the Cline agent on model \`gemini-4-argon\` through the OpenAI-compatible gateway \`https://gwarden.su/v1\`." \
+            || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cline-run-log
+          path: cline-run.jsonl
